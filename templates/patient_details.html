@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Patient Details | Care Connect</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap & Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(to right, #e0f7fa, #ffffff);
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .card {
+            border: none;
+            border-radius: 1rem;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn-hospital {
+            background-color: #00bcd4;
+            color: white;
+            border-radius: 30px;
+            font-weight: 500;
+        }
+        .btn-hospital:hover {
+            background-color: #0097a7;
+            transform: scale(1.03);
+        }
+        h2, h4 {
+            font-weight: 700;
+            color: #004d40;
+        }
+        .table thead {
+            background-color: #b2ebf2;
+        }
+        .icon {
+            color: #00acc1;
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="container my-5">
+    <h2 class="text-center mb-4"><i class="bi bi-person-vcard icon"></i>Patient Details</h2>
+
+    {% if patient %}
+        <div class="card mb-4 p-4">
+            <div class="row g-3">
+                <div class="col-md-6"><strong>Aadhaar Number:</strong> {{ patient[0] }}</div>
+                <div class="col-md-6"><strong>Name:</strong> {{ patient[1] }}</div>
+                <div class="col-md-6"><strong>Age:</strong> {{ patient[2] }}</div>
+                <div class="col-md-6"><strong>Gender:</strong> {{ patient[3] }}</div>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-center gap-3 mb-4">
+            <a href="{{ url_for('add_checkup') }}" class="btn btn-hospital px-4">
+                <i class="bi bi-plus-square icon"></i> Add New Checkup
+            </a>
+            <a href="{{ url_for('upload_report', aadhaar=aadhaar) }}" class="btn btn-success px-4">
+                <i class="bi bi-file-earmark-arrow-up icon"></i> Upload Report
+            </a>
+        </div>
+
+        {% if checkups %}
+            <h4 class="mb-3"><i class="bi bi-clipboard-pulse icon"></i>Previous Checkups</h4>
+            <div class="table-responsive mb-4">
+                <table class="table table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Symptoms</th>
+                            <th>Diagnosis</th>
+                            <th>Prescription</th>
+                            <th>Doctor ID</th>
+                            <th>Report</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in checkups %}
+                            <tr>
+                                <td>{{ c[3] }}</td>
+                                <td>{{ c[4] }}</td>
+                                <td>{{ c[5] }}</td>
+                                <td>{{ c[6] }}</td>
+                                <td>{{ c[2] }}</td>
+                                <td>
+                                    {% if reports %}
+                                        <a href="{{ url_for('static', filename='reports/' + reports[0][0]) }}" target="_blank" class="text-decoration-none text-info">
+                                            <i class="bi bi-file-earmark-medical-fill"></i> View
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">No Report</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="alert alert-info text-center">No previous checkup records found.</div>
+        {% endif %}
+
+        {% if reports %}
+            <h4 class="mb-3"><i class="bi bi-folder2-open icon"></i>Uploaded Reports</h4>
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Uploaded On</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for report in reports %}
+                            <tr>
+                                <td>
+                                    <a href="{{ url_for('static', filename='reports/' + report[0]) }}" target="_blank" class="text-decoration-none text-info">
+                                        <i class="bi bi-file-earmark-pdf-fill"></i> {{ report[0] }}
+                                    </a>
+                                </td>
+                                <td>{{ report[1] }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <div class="alert alert-danger text-center">Patient details not found.</div>
+    {% endif %}
+
+    <div class="text-center mt-4">
+        <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary px-4">
+            <i class="bi bi-arrow-left-circle icon"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

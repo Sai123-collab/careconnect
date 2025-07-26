@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Add Checkup | Care Connect</title>
+</head>
+<body>
+    <h3>Add New Checkup Details</h3>
+    <form method="POST" action="{{ url_for('add_checkup') }}">
+        <label>Name: <input type="text" name="name" required></label><br>
+        <label>Age: <input type="number" name="age" min="0" required></label><br>
+        <label>Gender:
+            <select name="gender" required>
+                <option value="">--Select--</option>
+                <option>Male</option>
+                <option>Female</option>
+                <option>Other</option>
+            </select>
+        </label><br>
+        <label>Symptoms: <textarea name="symptoms" required></textarea></label><br>
+        <label>Diagnosis: <textarea name="diagnosis" required></textarea></label><br>
+        <label>Prescription: <textarea name="prescription" required></textarea></label><br>
+        <label>Date: <input type="date" name="date" required></label><br>
+        <button type="submit">Add Checkup</button>
+    </form>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload Report</title>
+</head>
+<body>
+    <h2>Upload Report for Aadhaar: {{ session['aadhaar'] }}</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="file" name="report" required>
+        <button type="submit">Upload</button>
+    </form>
+    <a href="{{ url_for('patient_details') }}">Back to Patient Details</a>
+</body>
+</html>
