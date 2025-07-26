@@ -231,7 +231,7 @@ def patient_details():
     # ✅ Fetch checkups and reports
     cursor.execute("SELECT * FROM checkups WHERE aadhaar = ?", (aadhaar,))
     checkups = cursor.fetchall()
-    cursor.execute("SELECT filename, upload_date FROM reports WHERE aadhaar = ?", (aadhaar,))
+    cursor.execute("SELECT id, filename, upload_date FROM reports WHERE aadhaar = ?", (aadhaar,))
     reports = cursor.fetchall()
 
     conn.close()
@@ -338,6 +338,29 @@ def logout():
     return redirect(url_for('index'))
 
 # ---------- Run ----------
+@app.route('/delete_report/<filename>', methods=['POST'])
+def delete_report(filename):
+    if 'doctor_id' not in session:
+        return redirect(url_for('login'))
+
+    aadhaar = request.args.get('aadhaar')
+
+    # Delete file
+    file_path = os.path.join('static/reports', filename)
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    # Delete DB record
+    conn = sqlite3.connect('careconnect.db')
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM reports WHERE filename = ?", (filename,))
+    conn.commit()
+    conn.close()
+
+    flash('Report removed successfully.', 'success')
+    return redirect(url_for('patient_details'))
+
+
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
