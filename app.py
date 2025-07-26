@@ -16,6 +16,13 @@ phone = os.getenv("TWILIO_PHONE_NUMBER")
 
 # Initialize Twilio client
 client = Client(account_sid, auth_token)
+import sqlite3
+
+def get_db_connection():
+    conn = sqlite3.connect('database.db')  # change 'database.db' to your DB name if different
+    conn.row_factory = sqlite3.Row
+    return conn
+
 
 
 
@@ -98,7 +105,7 @@ def register():
             flash("Doctor ID already exists", "danger")
         finally:
             conn.close()
-    return redirect(url_for('index'))
+    
     return render_template('register.html')
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -238,6 +245,37 @@ def patient_details():
 
     return render_template('patient_details.html', patient=patient, checkups=checkups, reports=reports, aadhaar=aadhaar)
 
+
+@app.route('/delete_checkup/<int:checkup_id>', methods=['POST'])
+def delete_checkup(checkup_id):
+    if 'doctor_name' not in session:
+        return redirect(url_for('login'))
+
+    conn = sqlite3.connect('careconnect.db')
+    cursor = conn.cursor()
+
+    # Fetch report_file
+    cursor.execute('SELECT report_file FROM checkups WHERE id = ?', (checkup_id,))
+    result = cursor.fetchone()
+
+    if result and result[0]:
+        report_file = result[0]
+        report_path = os.path.join(app.root_path, 'static', 'reports', report_file)
+        print("Trying to delete:", report_path)  # Debug
+
+        if os.path.exists(report_path):
+            os.remove(report_path)
+            print("Deleted:", report_path)
+        else:
+            print("File does not exist:", report_path)
+
+    # Delete DB record
+    cursor.execute('DELETE FROM checkups WHERE id = ?', (checkup_id,))
+    conn.commit()
+    conn.close()
+
+    flash('Checkup and report deleted.', 'success')
+    return redirect(url_for('patient_details'))
 
 
 
