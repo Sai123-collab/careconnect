@@ -38,7 +38,20 @@
             to {
                 opacity: 1;
                 transform: translateY(0);
+
             }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {
+                transform: translateX(-50%) translateY(0);
+            }
+            40% {
+                transform: translateX(-50%) translateY(-20px);
+            }
+            60% {
+                transform: translateX(-50%) translateY(-10px);
+            }
+        }
+
         }
 
         .btn {
@@ -81,16 +94,47 @@
         .chat-icon {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             background-color: #0d6efd;
             color: white;
             border-radius: 50%;
-            padding: 15px;
+            padding: 20px;
+            font-size: 32px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             cursor: pointer;
             z-index: 1000;
-            transition: transform 0.3s ease;
+            animation: bounce 2s infinite;
         }
+
+        .chat-bubble {
+            padding: 10px 15px;
+            margin: 8px 0;
+            border-radius: 15px;
+            max-width: 80%;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+        .user-bubble {
+            background-color: #d1e7ff;
+            color: #000;
+            align-self: flex-end;
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+        }
+        .bot-bubble {
+            background-color: #f1f1f1;
+            color: #333;
+            align-self: flex-start;
+            margin-right: auto;
+            border-bottom-left-radius: 0;
+        }
+
+        .chat-body {
+            display: flex;
+            flex-direction: column;
+        }
+            
 
         .chat-icon:hover {
             transform: scale(1.1);
@@ -151,11 +195,31 @@
             <a href="/register" class="btn btn-success">Doctor Register</a>
         </div>
     </div>
+       <div style="text-align: center;">
+            <strong>Try asking me:</strong>
+         </div>
+        
+
+               
+
+    
 
     <!-- Floating Chat Icon -->
     <div class="chat-icon" onclick="toggleChat()">💬</div>
+        <div id="chat-box" style="
+            display: none;
+            margin: 40px auto;
+            width: 90%;
+            max-width: 500px;
+            height: 500px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 1;
+            overflow: hidden;
+        ">
 
-    <div id="chat-box" style="display: none; position: fixed; bottom: 80px; right: 20px; width: 350px; height: 450px; background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1001; overflow: hidden;">
+
         <div style="background:#0d6efd; color:white; padding:10px; font-weight:bold;">CareBot 🤖</div>
         <div id="chat-body" style="padding: 10px; height: 340px; overflow-y: auto; font-size: 14px;"></div>
        <div style="display: flex; border-top: 1px solid #ccc;">
@@ -189,6 +253,8 @@
         </p>
     </div>
 
+
+
     <!-- Clock Script -->
     <script>
         function updateClock() {
@@ -202,7 +268,16 @@
     
         function toggleChat() {
             const chatBox = document.getElementById("chat-box");
-            chatBox.style.display = (chatBox.style.display === "none") ? "block" : "none";
+            const chatBody = document.getElementById("chat-body");
+            const userInput = document.getElementById("userInput");
+
+            if (chatBox.style.display === "none" || chatBox.style.display === "") {
+                chatBox.style.display = "block";
+            } else {
+                chatBox.style.display = "none";
+                chatBody.innerHTML = "";        // 🧹 Clears messages
+                userInput.value = "";           // 🧼 Resets input
+            }
         }
 
         function handleChatKey(event) {
@@ -228,7 +303,44 @@
             const fakeEnter = new KeyboardEvent("keydown", { key: "Enter" });
             handleChatKey(fakeEnter);
         }
+        function typeBotResponse(text, callback) {
+            const chatBody = document.getElementById("chat-body");
+            const botMsgDiv = document.createElement("div");
+            botMsgDiv.classList.add("chat-bubble", "bot-bubble");
+            chatBody.appendChild(botMsgDiv);
 
+            let i = 0;
+            const interval = setInterval(() => {
+                botMsgDiv.textContent += text.charAt(i);
+                i++;
+                if (i >= text.length) {
+                    clearInterval(interval);
+                    chatBody.scrollTop = chatBody.scrollHeight;
+                    if (callback) callback();
+                }
+            }, 30);
+        }
+
+        // Updated chat handler
+        function handleChatKey(event) {
+            if (event.key === "Enter") {
+                const input = document.getElementById("userInput");
+                const message = input.value.trim();
+                if (!message) return;
+
+                const chatBody = document.getElementById("chat-body");
+                const userMsgDiv = document.createElement("div");
+                userMsgDiv.classList.add("chat-bubble", "user-bubble");
+                userMsgDiv.textContent = message;
+                chatBody.appendChild(userMsgDiv);
+
+                const response = getCareBotReply(message.toLowerCase());
+                typeBotResponse(response);
+
+                input.value = "";
+                chatBody.scrollTop = chatBody.scrollHeight;
+            }
+        }
 
 
         // CareBot 🤖 response library (1000+ diverse replies)
@@ -239,6 +351,57 @@
             if (msg.includes("hello") || msg.includes("hi")) return "Hi there! 👋 I'm CareBot, your health assistant.";
             if (msg.includes("good morning")) return "Good morning! 🌅 Hope your day is as healthy as your mind!";
             if (msg.includes("good night")) return "Sleep well! 😴 CareBot will be here tomorrow too!";
+            if (msg.includes("how to stay healthy")) return "Eat balanced meals, exercise regularly, sleep well, and manage stress.";
+            if (msg.includes("daily health tips")) return "Hydrate, stretch, eat fruits, and take breaks from screens!";
+            if (msg.includes("how much water")) return "Aim for 2–3 liters per day, or 8–10 glasses. More if you're active!";
+            if (msg.includes("fruits to eat")) return "Apples, bananas, berries, oranges, and papayas are great for your immunity!";
+            if (msg.includes("healthy snacks")) return "Try almonds, yogurt, fruit slices, roasted chickpeas, or peanut butter toast.";
+            if (msg.includes("how much sleep")) return "Adults need 7–9 hours of sleep. Kids and teens need even more!";
+            if (msg.includes("exercise daily")) return "Yes! 30 minutes of moderate movement like walking or yoga is beneficial.";
+            if (msg.includes("is walking good")) return "Absolutely! Walking improves heart health, mental clarity, and energy.";
+            if (msg.includes("covid symptoms")) return "Common symptoms include fever, cough, fatigue, and loss of smell or taste.";
+            if (msg.includes("when to see doctor")) return "If you have high fever, severe pain, shortness of breath, or prolonged symptoms.";
+            if (msg.includes("best diet")) return "A balanced diet with veggies, fruits, proteins, grains, and healthy fats works best.";
+            if (msg.includes("junk food")) return "Limit processed and fried foods. They’re high in salt, sugar, and unhealthy fats.";
+            if (msg.includes("weight loss")) return "Eat clean, stay active, track your meals, and get enough sleep.";
+            if (msg.includes("gain weight")) return "Increase protein, healthy fats, and calorie-dense foods in your meals.";
+            if (msg.includes("is sugar bad")) return "Too much added sugar increases risk of diabetes and heart disease.";
+            if (msg.includes("stress relief")) return "Try breathing exercises, nature walks, or talking to a friend.";
+            if (msg.includes("importance of hygiene")) return "Good hygiene prevents infection, boosts confidence, and keeps others safe.";
+            if (msg.includes("hand washing")) return "Wash for 20 seconds with soap, especially before eating and after using the restroom.";
+            if (msg.includes("brushing teeth")) return "Brush twice a day with fluoride toothpaste and replace your brush every 3 months.";
+            if (msg.includes("what is BMI")) return "BMI stands for Body Mass Index — it helps estimate if your weight is healthy for your height.";
+            if (msg.includes("mental health")) return "Mental health is just as important as physical health. Don't hesitate to seek support.";
+            if (msg.includes("boost immunity")) return "Eat vitamin-rich foods, stay active, get enough sleep, and avoid stress.";
+            if (msg.includes("is fever dangerous")) return "Low-grade fever isn't always serious, but persistent or high fever needs attention.";
+            if (msg.includes("high bp")) return "High blood pressure can harm your heart. Reduce salt, manage stress, and monitor regularly.";
+            if (msg.includes("low bp")) return "Low BP may cause dizziness. Stay hydrated and eat small, frequent meals.";
+            if (msg.includes("diabetes")) return "Control sugar intake, exercise, and monitor blood glucose levels regularly.";
+            if (msg.includes("cholesterol")) return "Avoid fried foods, eat oats and fiber, and get regular checkups.";
+            if (msg.includes("health checkup")) return "Regular checkups help catch issues early. Aim for once a year, or as advised.";
+            if (msg.includes("vitamin D")) return "Sunlight helps! Also include eggs, mushrooms, or fortified foods in your diet.";
+            if (msg.includes("calcium foods")) return "Try milk, yogurt, tofu, leafy greens, and almonds for calcium.";
+            if (msg.includes("protein foods")) return "Eggs, lentils, chicken, fish, beans, and quinoa are rich in protein.";
+            if (msg.includes("how to quit smoking")) return "Start by reducing intake, finding support groups, and replacing triggers with healthy habits.";
+            if (msg.includes("alcohol effect")) return "Excess alcohol harms liver and brain function. Moderation is key.";
+            if (msg.includes("how to prevent cold")) return "Wash hands often, avoid close contact, stay warm, and eat immune-boosting foods.";
+            if (msg.includes("morning routine")) return "Wake early, drink water, stretch, eat a good breakfast, and plan your day.";
+            if (msg.includes("night routine")) return "Avoid screens, dim the lights, practice gratitude, and sleep at the same time daily.";
+            if (msg.includes("skin care")) return "Cleanse gently, moisturize, use sunscreen, and stay hydrated!";
+            if (msg.includes("eye care")) return "Rest your eyes every 20 minutes, blink often, and get regular eye exams.";
+            if (msg.includes("back pain")) return "Check your posture, do core exercises, and avoid lifting heavy items improperly.";
+            if (msg.includes("healthy heart")) return "Stay active, eat heart-friendly foods, and limit salt and stress.";
+            if (msg.includes("vaccination")) return "Vaccines protect you and others. Stay updated with your doctor’s schedule.";
+            if (msg.includes("common cold")) return "Rest, hydrate, and eat warm soups. Most colds clear in a week.";
+            if (msg.includes("acidity")) return "Avoid spicy foods, eat on time, and drink plenty of water.";
+            if (msg.includes("constipation")) return "Eat fiber-rich foods, drink water, and stay physically active.";
+            if (msg.includes("how to relax")) return "Try slow breathing, calming music, or spending time in nature.";
+            if (msg.includes("how to sleep better")) return "Keep a fixed bedtime, avoid caffeine, and make your room cool and dark.";
+            if (msg.includes("balance hormones")) return "Get sleep, exercise, and eat a nutrient-rich diet.";
+            if (msg.includes("hair loss")) return "It can be due to stress, diet, or hormones. Try a balanced diet and gentle hair care.";
+            if (msg.includes("water benefits")) return "Water flushes out toxins, supports digestion, and keeps your skin glowing.";
+            if (msg.includes("how to stay fit")) return "Consistency is key: move your body, eat clean, and rest well!";
+
 
             // Instructions
             if (msg.includes("register")) return "You can register by clicking the green 'Doctor Register' button.";
@@ -281,10 +444,131 @@
 
             // Fun Facts
             if (msg.includes("fact")) return "Did you know? Laughter can boost your immune system! 😂💪";
+            if (msg.includes("jokes_&_fun_trigger_9704")) return "I tried to be a doctor, but I lost patience. 😅";
+            if (msg.includes("joke") || msg.includes("make me laugh") || msg.includes("funny")) return getRandomJoke();
+            if (msg.includes("your name")) return "I’m CareBot, your friendly health assistant!";
+            if (msg.includes("what can you do")) return "I can help with appointments, patient records, wellness tips, and more!";
+            if (msg.includes("hello") || msg.includes("hi")) return "Hello! How can I support your health journey today?";
+            if (msg.includes("good morning")) return "Good morning! Hope you slept well — how can I assist you today?";
+            if (msg.includes("good night")) return "Good night! Rest well — feel free to reach out tomorrow for anything.";
+            if (msg.includes("thank you") || msg.includes("thanks")) return "You're welcome! Always happy to help.";
+            if (msg.includes("bye") || msg.includes("goodbye")) return "Take care! I'm here whenever you need health help.";
+            if (msg.includes("help")) return "Sure, I can assist with login, registration, appointments, wellness advice, and more.";
+            if (msg.includes("appointment")) return "You can schedule, reschedule, or cancel appointments in our Appointment section.";
+            if (msg.includes("schedule appointment")) return "Please provide preferred date and time, and I’ll check availability.";
+            if (msg.includes("cancel appointment")) return "Sure—please tell me which appointment you'd like to cancel.";
+            if (msg.includes("reschedule")) return "Of course. Share the current appointment details and your new preferred slot.";
+            if (msg.includes("register") || msg.includes("signup")) return "To register, I just need your name, email, date of birth.";
+            if (msg.includes("login")) return "Please enter your username and password to log in, or I can help reset your password.";
+            if (msg.includes("forgot password") || msg.includes("reset password")) return "No problem! Click ‘Forgot Password’ on the login screen or I can guide you through.";
+            if (msg.includes("update profile")) return "Go to 'Settings' and edit your personal info, contact, or health details.";
+            if (msg.includes("notification")) return "Enable notifications to get reminders about appointments and health updates.";
+            if (msg.includes("report")) return "You can view or download your medical reports under the 'Reports' tab.";
+            if (msg.includes("upload report")) return "To upload a report, go to patient profile and click 'Upload' under Reports.";
+            if (msg.includes("symptom")) return "Tell me your symptom(s), and I can offer guidance or route you to a doctor.";
+            if (msg.includes("fever")) return "For fever, try staying hydrated and monitoring your temperature; when did it start?";
+            if (msg.includes("cough")) return "A persistent cough? Are there other symptoms like fever or throat pain?";
+            if (msg.includes("headache")) return "Sorry to hear you have a headache. How long has it been going on?";
+            if (msg.includes("pain")) return "Where exactly is the pain located, and how intense is it on a scale of 1–10?";
+            if (msg.includes("emergency")) return "If it's a medical emergency, please call emergency services or go to the nearest hospital.";
+            if (msg.includes("doctor")) return "You can search doctors by specialty and location in our 'Find a Doctor' section.";
+            if (msg.includes("specialist")) return "Let me know the kind of specialist you need; I’ll find one near you.";
+            if (msg.includes("wellness tips") || msg.includes("health tips")) return "I can share tips on nutrition, exercise, sleep and stress management.";
+            if (msg.includes("exercise")) return "Regular physical activity helps — would you like some beginner workout ideas?";
+            if (msg.includes("nutrition") || msg.includes("diet")) return "A balanced diet is key. Want healthy meal ideas or dietary advice?";
+            if (msg.includes("sleep")) return "Good sleep is vital — ask me for sleep hygiene tips if you'd like.";
+            if (msg.includes("stress")) return "Stress relievers include breathing exercises, relaxation, and short walks. Need guidance?";
+            if (msg.includes("mental health")) return "You’re not alone — I can connect you with supportive resources and tips.";
+            if (msg.includes("medication")) return "For medication info or reminders, please specify the name and schedule.";
+            if (msg.includes("side effect")) return "Side effects vary—please tell me the medication name and symptoms.";
+            if (msg.includes("billing")) return "To check billing or payment history, visit Billing in your dashboard.";
+            if (msg.includes("insurance")) return "Please provide your insurance provider, and I’ll confirm coverage details.";
+            if (msg.includes("lab results")) return "Lab results are available under Results — would you like to view them now?";
+            if (msg.includes("upload image") || msg.includes("upload scan")) return "You can upload scans or images via the patient profile section.";
+            if (msg.includes("feedback")) return "We appreciate your feedback! Please share your thoughts with us.";
+            if (msg.includes("contact support")) return "You can reach support at support@careconnect.com or call 1‑800‑123‑456.";
+            if (msg.includes("about you")) return "I'm CareBot, created to make healthcare smoother, friendlier, and more accessible.";
+            if (msg.includes("privacy")) return "Your health data is secure and confidential, compliant with healthcare regulations.";
+            if (msg.includes("data security")) return "We use encryption and secure protocols to protect all patient data.";
+            if (msg.includes("language")) return "Currently I support English; more languages are coming soon!";
+            if (msg.includes("settings")) return "Head to 'Settings' to manage preferences, notifications, and personal info.";
+            if (msg.includes("profile")) return "You can view or edit your profile under the Profile tab.";
+            if (msg.includes("health record")) return "Your electronic health records are accessible and downloadable anytime.";
+            if (msg.includes("login issues")) return "Trouble logging in? I can help reset your password or troubleshoot access.";
+            if (msg.includes("not working") || msg.includes("bug")) return "Sorry about that. Please describe the issue; I’ll report it to support.";
+            if (msg.includes("suggestion")) return "We’d love to hear your suggestions for improving your experience.";
+            if (msg.includes("patients")) return "You can view all patients assigned to you in the Dashboard.";
+            if (msg.includes("dashboard")) return "Your dashboard shows appointments, messages, health summaries, and more.";
+            if (msg.includes("messages")) return "You can send secure messages to doctors and staff from the Messages tab.";
+            if (msg.includes("reminder")) return "You can set up medication or appointment reminders under 'Reminders'.";
+            if (msg.includes("notifications off")) return "You can turn notifications on/off in Settings.";
+            if (msg.includes("terms")) return "You can review our Terms of Service in the About section.";
+            if (msg.includes("help center")) return "Visit our Help Center for tutorials and troubleshooting guides.";
+            if (msg.includes("virtual visit") || msg.includes("telehealth")) return "You can book a virtual consultation via Telehealth tab.";
+            if (msg.includes("video call")) return "Video calls start from your appointment page when scheduled.";
+            if (msg.includes("prescription")) return "Prescriptions are available under your Patient Records section.";
+            if (msg.includes("renew prescription")) return "To request a renewal, click 'Renew' next to your prescription listing.";
+            if (msg.includes("travel health")) return "Planning to travel? Ask me about vaccines or health advice for your destination.";
+            if (msg.includes("vaccination") || msg.includes("vaccine")) return "Vaccination info and schedules are available under Immunizations.";
+            if (msg.includes("allergy")) return "Share your allergy type and symptoms; I can guide you on care.";
+            if (msg.includes("follow up")) return "You can schedule a follow‑up appointment at a time that suits you.";
+            if (msg.includes("medical history")) return "You can upload or review your medical history file under Profile.";
+            if (msg.includes("blood test")) return "Need a blood test? You can book lab services via the Lab tab.";
+            if (msg.includes("i feel tired")) return "It’s okay to feel tired. Rest is part of healing. You’re doing better than you think.";
+            if (msg.includes("i feel weak")) return "Even in weakness, there's strength. One step at a time — you’ve got this.";
+            if (msg.includes("i want to give up")) return "Don’t give up — every small effort you make is moving you forward.";
+            if (msg.includes("i feel sad")) return "Sadness is part of healing too. You're not alone — I'm here to support you.";
+            if (msg.includes("i feel anxious")) return "Try taking a few deep breaths. You're stronger than your anxiety.";
+            if (msg.includes("i feel depressed")) return "Talking helps. You’re not alone, and brighter days are ahead.";
+            if (msg.includes("i feel lost")) return "Sometimes the path isn’t clear, but keep going — you’re not alone in this journey.";
+            if (msg.includes("i can't do this")) return "You *can* do this. You've already overcome so much.";
+            if (msg.includes("i'm scared")) return "Fear is natural. Let’s face it together — I’m here for you.";
+            if (msg.includes("i need motivation")) return "You are stronger than you realize. Keep going — your health matters.";
+            if (msg.includes("life is hard")) return "Yes, it is. But so are you. Every day you try is a win.";
+            if (msg.includes("i feel alone")) return "You are not alone. I’m here 24/7, and others care about you too.";
+            if (msg.includes("i'm stressed")) return "Take a deep breath. You're handling more than you know — and you're doing well.";
+            if (msg.includes("i feel useless")) return "You matter. Your presence, your effort, your story — all valuable.";
+            if (msg.includes("i need hope")) return "Hope is never out of reach. I believe in your strength to get through this.";
+            if (msg.includes("i'm in pain")) return "I'm sorry you're hurting. Be kind to yourself today.";
+            if (msg.includes("i'm tired of fighting")) return "It’s okay to rest. Even warriors need a break. You’re doing great.";
+            if (msg.includes("is there hope")) return "Absolutely. Healing isn’t linear, but hope is always part of the process.";
+            if (msg.includes("why me")) return "It’s a hard question — but you’re not defined by what happens. You’re defined by how you keep going.";
+            if (msg.includes("no one understands")) return "That feeling is real, but I’m here, and I hear you. You’re not alone.";
+            if (msg.includes("what’s the point")) return "The point is *you*. Your life, your journey, your future — it all matters.";
+            if (msg.includes("i failed")) return "Failure isn’t the end — it’s just part of learning and growing.";
+            if (msg.includes("i made a mistake")) return "Mistakes happen. What matters is what you do next — and you’re already trying.";
+            if (msg.includes("i need support")) return "I’m here for you. And we can find more support together if you need it.";
+            if (msg.includes("i want to cry")) return "Go ahead. Let it out. Crying is healing too.";
+            if (msg.includes("i can't breathe")) return "Take slow, deep breaths. In... out... You’re doing great.";
+            if (msg.includes("i'm nervous")) return "It’s okay to be nervous — it means you care. You’re ready.";
+            if (msg.includes("i'm angry")) return "That’s valid too. Emotions are human. Let’s try to work through it.";
+            if (msg.includes("i'm trying my best")) return "And that’s more than enough. Keep going — you’re doing great.";
+            if (msg.includes("i’m not okay")) return "That’s okay. You don’t have to be okay every day. I’m still with you.";
+            if (msg.includes("can i talk to someone")) return "Yes, I can help you find a counselor or connect with support.";
+
+
+
 
             // Defaults
             return "I'm still learning 🧠. Try asking about login, patients, or even tell me to crack a joke!";
         }
+        const jokes = [
+            "Why did the doctor carry a red pen? In case they needed to draw blood! 😂",
+            "I told my doctor I broke my arm in two places. He told me to stop going to those places!",
+            "Why did the skeleton go to the party alone? He had no body to go with him! 🦴",
+            "What do you call a lazy doctor? Dr. Do-little! 😴",
+            "Why did the computer go to the doctor? It caught a virus! 💻🤒",
+            "Patient: Doctor, I think I'm invisible. Doctor: Who said that? 😆",
+            "Why did the tomato turn red? Because it saw the salad dressing! 🍅👗",
+            "Why do nurses carry red pens? In case they need to draw blood!",
+            "What’s a skeleton’s least favorite room in the hospital? The living room!",
+            "Doctor: You need hearing aids. Patient: What? Doctor: YOU NEED HEARING AIDS! 😂"
+        ];
+
+        function getRandomJoke() {
+            return jokes[Math.floor(Math.random() * jokes.length)];
+        }
+
 
 
     </script>
