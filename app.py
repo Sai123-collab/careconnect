@@ -19,9 +19,20 @@ client = Client(account_sid, auth_token)
 import sqlite3
 
 def get_db_connection():
-    conn = sqlite3.connect('database.db')  # change 'database.db' to your DB name if different
+    conn = sqlite3.connect('careconnect.db')  # change 'database.db' to your DB name if different
     conn.row_factory = sqlite3.Row
     return conn
+import sqlite3
+
+conn = sqlite3.connect('careconnect.db')
+cursor = conn.cursor()
+
+# Example: Update phone number for a patient
+cursor.execute("UPDATE patients SET phone = ? WHERE aadhaar = ?", ("9876543210", "123456789012"))
+
+conn.commit()
+conn.close()
+
 
 
 
@@ -44,13 +55,17 @@ def init_db():
     ''')
 
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS patients (
-            aadhaar TEXT PRIMARY KEY,
-            name TEXT,
-            age INTEGER,
-            gender TEXT
-        )
-    ''')
+    CREATE TABLE IF NOT EXISTS patients (
+        aadhaar TEXT PRIMARY KEY,
+        name TEXT,
+        age INTEGER,
+        gender TEXT,
+        phone TEXT
+    )
+''')
+
+
+
 
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS checkups (
@@ -138,63 +153,93 @@ def dashboard():
         session['aadhaar'] = aadhaar
         session['otp'] = otp
 
-        # Fetch doctor phone from DB
         conn = sqlite3.connect('careconnect.db')
         cursor = conn.cursor()
-        cursor.execute("SELECT phone FROM doctors WHERE doctor_id = ?", (session['doctor_id'],))
-        doctor_phone = cursor.fetchone()
+        cursor.execute("SELECT phone FROM patients WHERE aadhaar = ?", (aadhaar,))
+        patient_phone = cursor.fetchone()
         conn.close()
 
-        if doctor_phone:
+        if patient_phone and patient_phone[0]:
             try:
-                to_number = doctor_phone[0]
+                to_number = patient_phone[0]
                 if not to_number.startswith('+'):
-                    to_number = '+91' + to_number  # Add country code if missing
+                    to_number = '+91' + to_number
 
                 # Send OTP via Twilio
-                message = client.messages.create(
+                client.messages.create(
                     body=f"Your OTP for CareConnect is: {otp}",
                     from_=phone,
                     to=to_number
                 )
-                flash("✅ OTP has been sent to your registered number.", "success")
+                flash("✅ OTP has been sent to the registered number.", "success")
 
             except Exception as e:
                 print(f"[⚠️ Twilio Error] {e}")
-                flash("⚠️ Unable to send OTP to your number.", "warning")
-                flash(f"🔑 Temporary OTP for verification: {otp}", "info")  # Fallback
-
+                flash("⚠️ Unable to send OTP. Using backup OTP instead.", "warning")
+                flash(f"🔑 Backup OTP: {otp}", "info")
         else:
-            flash("❌ Doctor phone number not found.", "danger")
+            flash("❌ Phone number not found for this Aadhaar.", "danger")
 
+        # ✅ Redirect to verify_otp page
         return redirect(url_for('verify_otp'))
 
     return render_template('dashboard.html')
 
 
 
-@app.route('/verify_otp', methods=['GET', 'POST'])
-def verify_otp():
-    if 'otp' not in session:
-        flash("OTP session expired or not set.", "danger")
-        return redirect(url_for('dashboard'))
-
-    if request.method == 'POST':
-        entered_otp = request.form.get('otp')
-        actual_otp = session.get('otp')
-
-        if entered_otp == actual_otp:
-            flash("OTP verified successfully", "success")
-            return redirect(url_for('patient_details'))
-        elif entered_otp == session.get("backup_code"):
-            flash("Backup code used. OTP verification successful.", "warning")
-            return redirect(url_for('patient_details'))
-        else:
-            flash("Invalid OTP. You can use the backup code if needed.", "danger")
-
     # Always generate a backup code (new for every GET request)
     session["backup_code"] = str(randint(100000, 999999))
     return render_template('verify_otp.html', backup_code=session["backup_code"])
+@app.route("/register_patient", methods=["GET", "POST"])
+def register_patient():
+    if "doctor_id" not in session:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        aadhaar = request.form["aadhaar"]
+        name = request.form["name"]
+        age = request.form["age"]
+        gender = request.form["gender"]
+        phone = request.form["phone"]
+
+        conn = sqlite3.connect("careconnect.db")
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM patients WHERE aadhaar = ?", (aadhaar,))
+        existing = cursor.fetchone()
+        if existing:
+            flash("Patient already exists.", "warning")
+            conn.close()
+            return redirect(url_for("register_patient"))
+
+        cursor.execute("INSERT INTO patients (aadhaar, name, age, gender, phone) VALUES (?, ?, ?, ?, ?)",
+                       (aadhaar, name, age, gender, phone))
+        conn.commit()
+        conn.close()
+
+        flash("Patient registered successfully.", "success")
+        return redirect(url_for("dashboard"))  # ✅ REDIRECT AFTER REGISTRATION
+
+    return render_template("register_patient.html")
+
+
+
+@app.route('/verify_otp', methods=['GET', 'POST'])
+def verify_otp():
+    if 'otp' not in session:
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        entered_otp = request.form['otp']
+        if entered_otp == session.get('otp'):
+            flash("✅ OTP verified successfully!", "success")
+            return redirect(url_for('patient_details'))
+        else:
+            flash("❌ Incorrect OTP. Try again.", "danger")
+
+    return render_template('verify_otp.html', backup_code=session.get('otp'))  # or backup_code=session["backup_code"]
+
+
 @app.route('/resend_otp')
 def resend_otp():
     if 'doctor_phone' in session:
@@ -256,6 +301,7 @@ def delete_checkup(checkup_id):
 
     # Fetch report_file
     cursor.execute('SELECT report_file FROM checkups WHERE id = ?', (checkup_id,))
+    
     result = cursor.fetchone()
 
     if result and result[0]:
@@ -271,6 +317,7 @@ def delete_checkup(checkup_id):
 
     # Delete DB record
     cursor.execute('DELETE FROM checkups WHERE id = ?', (checkup_id,))
+    
     conn.commit()
     conn.close()
 
