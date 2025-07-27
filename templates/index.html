@@ -78,7 +78,6 @@
             margin-bottom: 20px;
         }
 
-        /* Floating chat icon */
         .chat-icon {
             position: fixed;
             bottom: 20px;
@@ -95,6 +94,25 @@
 
         .chat-icon:hover {
             transform: scale(1.1);
+        }
+
+        .footer {
+            margin-top: 40px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            border-top: 2px solid #0d6efd;
+            text-align: center;
+            font-size: 14px;
+            color: #333;
+            border-radius: 15px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+        .footer strong {
+            color: #0d6efd;
         }
 
         @media (max-width: 576px) {
@@ -114,6 +132,11 @@
             #clock {
                 font-size: 16px;
             }
+
+            .footer {
+                font-size: 13px;
+                padding: 15px;
+            }
         }
     </style>
 </head>
@@ -130,8 +153,19 @@
     </div>
 
     <!-- Floating Chat Icon -->
-    <div class="chat-icon" onclick="alert('Chatbot Coming Soon!')">
-        💬
+    <div class="chat-icon" onclick="alert('Chatbot Coming Soon!')">💬</div>
+
+    <!-- Footer Section -->
+    <div class="footer mt-4">
+        <p><strong>Developed by:</strong> Sai Balaji and Team</p>
+        <p><strong>Contact:</strong> saibalaji790@gmail.com</p>
+        <hr>
+        <p><strong>📝 Instructions:</strong></p>
+        <p>
+            <strong>English:</strong> Doctors can register and login to access patient details via Aadhaar & OTP.<br>
+            <strong>తెలుగు:</strong> డాక్టర్లు రిజిస్టర్ అయ్యి, లాగిన్ చేసి, ఆధార్ & OTP ద్వారా రోగి వివరాలు చూడవచ్చు.<br>
+            <strong>हिन्दी:</strong> डॉक्टर पंजीकरण और लॉगिन करके, आधार और OTP से मरीज की जानकारी देख सकते हैं।
+        </p>
     </div>
 
     <!-- Clock Script -->

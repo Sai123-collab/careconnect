@@ -30,8 +30,18 @@ cursor = conn.cursor()
 # Example: Update phone number for a patient
 cursor.execute("UPDATE patients SET phone = ? WHERE aadhaar = ?", ("9876543210", "123456789012"))
 
+
+# --- TEMP FIX FOR RENDER DB MIGRATION ---
+try:
+    cursor.execute("ALTER TABLE patients ADD COLUMN phone TEXT")
+    conn.commit()
+    print("✅ Added 'phone' column to 'patients' table")
+except sqlite3.OperationalError:
+    print("ℹ️ 'phone' column already exists.")
 conn.commit()
 conn.close()
+# ----------------------------------------
+
 
 
 
