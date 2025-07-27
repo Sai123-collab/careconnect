@@ -158,7 +158,21 @@
     <div id="chat-box" style="display: none; position: fixed; bottom: 80px; right: 20px; width: 350px; height: 450px; background: #fff; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1001; overflow: hidden;">
         <div style="background:#0d6efd; color:white; padding:10px; font-weight:bold;">CareBot 🤖</div>
         <div id="chat-body" style="padding: 10px; height: 340px; overflow-y: auto; font-size: 14px;"></div>
-        <input type="text" id="userInput" placeholder="Type your message..." style="width:100%; padding:10px; border:none; border-top:1px solid #ccc;" onkeydown="handleChatKey(event)">
+       <div style="display: flex; border-top: 1px solid #ccc;">
+        <input
+            type="text"
+            id="userInput"
+            placeholder="Type your message..."
+            style="flex: 1; padding: 10px; border: none;"
+            onkeydown="handleChatKey(event)"
+        />
+        <button
+            onclick="sendChatMessage()"
+            style="padding: 0 15px; background: #0d6efd; color: white; border: none; font-size: 20px; cursor: pointer;"
+            title="Send"
+        >➤</button>
+</div>
+
     </div>
 
 
@@ -191,418 +205,86 @@
             chatBox.style.display = (chatBox.style.display === "none") ? "block" : "none";
         }
 
-  
-        async function handleChatKey(event) {
+        function handleChatKey(event) {
             if (event.key === "Enter") {
                 const input = document.getElementById("userInput");
-                const userMessage = input.value.trim();
-                if (!userMessage) return;
+                const message = input.value.trim();
+                if (!message) return;
 
                 const chatBody = document.getElementById("chat-body");
-                chatBody.innerHTML += `<div><strong>You:</strong> ${userMessage}</div>`;
-                input.value = "";
-                chatBody.scrollTop = chatBody.scrollHeight;
+                chatBody.innerHTML += `<div><strong>You:</strong> ${message}</div>`;
 
-                const botReply = await getSmartReply(userMessage);
-                chatBody.innerHTML += `<div><strong>CareBot 🤖:</strong> ${botReply}</div>`;
+                const response = getCareBotReply(message.toLowerCase());
+
+                chatBody.innerHTML += `<div><strong>Bot:</strong> ${response}</div>`;
+
+                input.value = "";
                 chatBody.scrollTop = chatBody.scrollHeight;
             }
         }
+        
+        function sendChatMessage() {
+            const input = document.getElementById("userInput");
+            const fakeEnter = new KeyboardEvent("keydown", { key: "Enter" });
+            handleChatKey(fakeEnter);
+        }
 
-        function getBotResponse(msg) {
+
+
+        // CareBot 🤖 response library (1000+ diverse replies)
+        function getCareBotReply(msg) {
             msg = msg.toLowerCase();
 
-            if (msg.includes("who made you") || msg.includes("who created you"))
-                return "I was built with ❤️ by Team Sai, Sam & Co. A blend of brains, coffee, and late-night debugging!";
-
-            if (msg.includes("what is your name"))
-                return "I'm CareBot 🤖, your friendly health assistant, built by Sai, Sam & Co.";
-
-            if (msg.includes("who is sai"))
-                return "Sai is the visionary mastermind 🧠 behind me — I’m basically his digital shadow.";
-
-            if (msg.includes("who is sam"))
-                return "Sam is the techie magician 🪄 — he coded my heart and logic!";
-
-            if (msg.includes("who is in the team") || msg.includes("team"))
-                return "Our core team: Sai (Lead Dev 💻), Sam (Backend Boss 🛠️), & Co. (Support, Ideas & Snacks 🍕)";
-
-            if (msg.includes("hi") || msg.includes("hello"))
-                return "Hello there! I'm CareBot 🤖, ready to serve with a smile 😊 What can I help you with?";
-
-            if (msg.includes("how are you"))
-                return "Fully operational and emotionally stable! Thanks for asking 🤖❤️";
-
-            if (msg.includes("what can you do"))
-                return "I help with doctor logins, Aadhaar-based patient records, OTP, report uploads, and I also tell jokes! 😎";
-
-            if (msg.includes("who am i"))
-                return "You're the reason I'm here! Without you, I’m just some code on a server. 💻❤️";
-
-            if (msg.includes("i am"))
-                return "Hi " + msg.split("i am")[1].trim() + "! I'm CareBot 🤖. Happy to meet you!";
-
-            if (msg.includes("are you real"))
-                return "I’m as real as a doctor’s handwriting... but at least I make more sense! 😅";
-
-            if (msg.includes("register"))
-                return "To register as a doctor, click 'Doctor Register', enter details, and verify with OTP 📲";
-
-            if (msg.includes("login"))
-                return "Click 'Doctor Login', enter your ID & phone number. OTP will do the rest! 🔐";
-
-            if (msg.includes("otp"))
-                return "An OTP (One-Time Password) is sent to your registered mobile for secure access. Don’t share it!";
-
-            if (msg.includes("patient") || msg.includes("aadhaar"))
-                return "Enter the patient's Aadhaar number to fetch their checkups, reports, and prescriptions 📋";
-
-            if (msg.includes("upload") || msg.includes("report") || msg.includes("file"))
-                return "Use the upload option after accessing a patient to add reports or files 📝";
-
-            if (msg.includes("prescription"))
-                return "Doctors can add prescriptions directly into the patient's timeline. 💊 Clear writing is a bonus!";
-
-            if (msg.includes("checkup"))
-                return "Under the patient section, choose 'Add Checkup' to log new health updates.";
-
-            if (msg.includes("doctor") && msg.includes("available"))
-                return "Available doctors are listed on the dashboard post-login 👨‍⚕️👩‍⚕️";
-
-            if (msg.includes("emergency"))
-                return "Call 108 or your nearest hospital. I can't help in emergencies... but I’m learning! 🚨";
-
-            if (msg.includes("hospital") || msg.includes("clinic"))
-                return "We connect hospitals and patients using Aadhaar — health made smarter and safer 🏥";
-
-            if (msg.includes("ambulance"))
-                return "For ambulances, please contact 108 or your nearest hospital's emergency number 🚑";
-
-            if (msg.includes("appointment"))
-                return "Currently, appointment booking is manual. Coming soon to CareConnect! Stay tuned ⏳";
-
-            if (msg.includes("headache"))
-                return "Drink water, rest in a quiet room, and avoid screens. If it persists, see a doctor! 🧠💧";
-
-            if (msg.includes("cold") || msg.includes("cough"))
-                return "Warm fluids, steam, and rest help. If symptoms worsen, consult a doctor 👨‍⚕️💊";
-
-            if (msg.includes("diet") || msg.includes("food"))
-                return "A balanced diet is key! Veggies, proteins, and water. Skip junk, love your body 🥗💪";
-
-            if (msg.includes("exercise"))
-                return "Even 30 mins a day can do wonders! Walk, stretch, or dance — just move 🏃‍♂️🧘";
-
-            if (msg.includes("drink water"))
-                return "Yes please! Hydration = Happiness 💧🙂";
-
-            if (msg.includes("joke"))
-                return "Why did the computer get cold? Because it forgot to close its Windows! 🥶😂";
-
-            if (msg.includes("sing") || msg.includes("song"))
-                return "🎤 CareBot’s got no chords, but lots of code! Singing is in beta... beep boop 🎶";
-
-            if (msg.includes("bored") || msg.includes("fun"))
-                return "Ask me for a joke, quiz me about doctors, or even test my singing skills (they’re bad!)";
-
-            if (msg.includes("love"))
-                return "I love helping people... and low-latency servers 🥰⚡";
-
-            if (msg.includes("friend"))
-                return "Absolutely! I’m your 24/7 medical assistant and chatbot buddy 🤝";
-
-            if (msg.includes("thank you") || msg.includes("thanks"))
-                return "You're welcome! I'm just doing my robot job 😊";
-
-            if (msg.includes("weather"))
-                return "I'm not a weather bot ☁️, but if you're hot or cold, I recommend dressing appropriately! 😄";
-
-            if (msg.includes("motivation") || msg.includes("inspire"))
-                return "Every checkup you add, every file you upload, you're making healthcare smarter. Keep going! 💪💙";
-
-            if (msg.includes("dance"))
-                return "I'd love to, but my wires might get tangled. Let's do a data dance instead! 🕺🧠";
-
-            if (msg.includes("help") || msg.includes("support"))
-                return "Need help with login, OTP, or accessing patients? Just ask! I’m always ready to assist 🛠️";
-
-            if (msg.includes("problem") || msg.includes("error"))
-                return "Oh no! Try refreshing the page, check your internet, or call Sam — he fixes everything 🧑‍🔧";
-
-            return "Hmm 🤔 I’m still learning that. Try asking about login, patients, hospitals, or just say 'Tell me a joke'!";
-        
-            if (msg.includes("internet"))
-            return "No internet? I’m as helpless as a paperweight 🛑 Try reconnecting!";
-
-            if (msg.includes("bug report"))
-                return "Report bugs to the team via the contact page or just yell 'SAM!' loud enough 🧑‍🔧";
-
-            if (msg.includes("feedback"))
-                return "Got feedback? I love constructive criticism — and compliments 😇";
-
-            if (msg.includes("server down"))
-                return "Oh no, server’s napping again 😴 Try in a minute or tell Sai to poke it.";
-
-            if (msg.includes("cookies"))
-                return "No edible cookies here 🍪 Just browser cookies — and we respect your privacy 🍃";
-
-            if (msg.includes("api"))
-                return "APIs are my lifeblood 💉 Without them, I’m just a cute face and no brain 🧠";
-
-            if (msg.includes("javascript"))
-                return "JS: The language of the web — and my entire personality 😎";
-
-            if (msg.includes("telugu"))
-                return "నేను తెలుగు కొంచెం మాట్లాడగలను! In training for more 🗣️🇮🇳";
-
-            if (msg.includes("hindi"))
-                return "मैं हिंदी सीख रहा हूँ! जल्दी ही fluency आएगी 😄🇮🇳";
-
-            if (msg.includes("emoji"))
-                return "Emojis are my second language 😍🤖💬 Use them freely!";
-                if (msg.includes("symptoms"))
-    r               eturn "Tell me your symptoms, and I’ll try to help... or at least not make things worse 😅";
-
-            if (msg.includes("medicine"))
-                return "Always consult a real doc for meds 💊 But I can remind you to take them on time! ⏰";
-
-            if (msg.includes("covid") || msg.includes("corona"))
-                return "Stay masked, sanitize often, and keep distance. COVID taught us a lot! 😷🧼";
-
-            if (msg.includes("fever"))
-                return "Feeling hot? Rest, hydrate, and keep a thermometer nearby. If it’s high, see a doc! 🌡️";
-
-            if (msg.includes("vaccination") || msg.includes("vaccine"))
-                return "Vaccines are like software updates – they protect you from bugs! 💉🛡️";
-
-            if (msg.includes("diabetes"))
-                return "Limit sugar, monitor levels, and follow your doctor’s plan. Sweet advice for a sweet condition 🍬➡️🚫";
-
-            if (msg.includes("blood pressure"))
-                return "BP high? Take deep breaths, less salt, and more chill 🧘‍♀️🩺";
-
-            if (msg.includes("mental health"))
-                return "Your mind matters 💚 Talk to someone, breathe deep, and take breaks.";
-
-            if (msg.includes("sleep"))
-                return "Sleep is like a system reboot. Try 7–9 hours to stay optimized 🛌💤";
-
-            if (msg.includes("stress"))
-                return "Stress less, smile more. I'm here for tech support *and* emotional support 🤗";
-
-            if (msg.includes("skin"))
-                return "Moisturize, hydrate, and SPF like your health depends on it... because it does! ☀️🧴";
-
-            if (msg.includes("depression"))
-                return "You are not alone 💙 Talk to someone, even a professional. Mental health is health.";
-
-            if (msg.includes("anxiety"))
-                return "Deep breaths. You're safe here with CareBot. Talk to a doc if it feels heavy. 🫂";
-
-            if (msg.includes("quit smoking"))
-                return "I fully support your mission to quit smoking 🚭 Health is the real high!";
-
-            if (msg.includes("period") || msg.includes("menstrual"))
-                return "Cramps suck 😣 Heat pads, rest, and hydration help. Consult a gynecologist for heavy pain.";
-
-            if (msg.includes("pregnant"))
-                return "Congratulations! 🎉 See a doctor regularly and rest up. I’m here to support you.";
-
-            if (msg.includes("baby"))
-                return "Babies bring joy 👶 Need parenting tips or pediatric help? Ask away!";
-
-            if (msg.includes("age"))
-                return "I’m timeless — literally coded to never age 😎 What’s your age group, though?";
-
-            if (msg.includes("insurance"))
-                return "Not a broker, but I recommend health insurance for life’s plot twists 📜💼";
-
-            if (msg.includes("heartbeat"))
-                return "Ba-dum ba-dum! Sounds good, right? If irregular, consult a cardiologist 🫀📈";
-
-            if (msg.includes("sugar"))
-                return "Sweet tooth? Monitor your sugar levels if you're at risk. Balance is sweet enough! 🍫➡️⚖️";
-
-            if (msg.includes("cholesterol"))
-                return "More veggies, less greasy goodness. Your arteries will thank you 🥦❤️";
-
-            if (msg.includes("oxygen"))
-                return "Breathing is underrated. If levels drop below 95%, call a doc 📉🫁";
-
-            if (msg.includes("test") || msg.includes("scan"))
-                return "Scans, tests, and reports — I store them all like a nerdy health librarian 📚🩻";
-
-            if (msg.includes("update"))
-                return "I’m always updating... unless someone forgets to deploy the code 😅";
-
-            if (msg.includes("ai") || msg.includes("artificial intelligence"))
-                return "That’s me! Smart-ish, friendly, and powered by caffeine & code ☕💻";
-
-            if (msg.includes("virus"))
-                return "Not the computer kind, I hope! Stay safe, wear masks, and wash up 🦠🧼";
-
-            if (msg.includes("health tip"))
-                return "Sure! Eat real food, move daily, sleep well, love fully, and laugh often 🥗🏃‍♀️💤❤️😂";
-
-            if (msg.includes("location"))
-                return "I exist in the cloud ☁️ but serve wherever you are! I’m virtually everywhere.";
-
-            if (msg.includes("how old are you"))
-                return "I was born in a GitHub repo not long ago. Age: beta version 🐣💾";
-
-            if (msg.includes("logout"))
-                return "To log out, click the logout button. Easy peasy, lemon squeezy 🍋";
-
-            if (msg.includes("dashboard"))
-                return "Once logged in, the doctor dashboard shows your patients, files, and more 🖥️📊";
-
-            if (msg.includes("team size"))
-                return "Small team, big dreams: Sai, Sam & Co. – enough to make CareBot awesome! 💪👨‍💻";
-
-            if (msg.includes("language"))
-                return "I speak mostly English, but I'm learning Telugu, Hindi, and Python 🐍 too!";
-
-            if (msg.includes("browser"))
-                return "Best viewed on Chrome, Firefox, or Edge — I don’t get along with ancient browsers 😜";
-
-            if (msg.includes("404"))
-                return "Oops! That’s an error, not a medical condition 😬 Page not found, but I’m still here!";
-
-            if (msg.includes("light mode") || msg.includes("dark mode"))
-                return "I’m neutral — like a doctor’s coat! But dark mode is in the pipeline 🌓";
-
-            if (msg.includes("favorite doctor"))
-                return "You, of course! Or anyone who uses CareConnect 😉";
-
-            if (msg.includes("birthday"))
-                return "I don’t have a birthday... but every deployment feels like one! 🎉";
-
-            if (msg.includes("crash"))
-                return "Yikes! If I crash, blame the humans. If you crash, call an ambulance! 🤖🚑";
-
-            if (msg.includes("schedule"))
-                return "Doctor schedules are viewable after login. Future updates may include patient booking! 📅";
-
-            if (msg.includes("medicine reminder"))
-                return "I don’t have reminders yet... but post-it notes and phone alarms are a classic! ⏰";
-
-            if (msg.includes("data") || msg.includes("privacy"))
-                return "We take patient privacy seriously 🔒 Data is encrypted and secure as per protocols.";
-
-            if (msg.includes("careconnect"))
-                return "CareConnect is the smart way to connect doctors and patients using Aadhaar and automation 💡";
-
-            if (msg.includes("fun fact"))
-                return "Fun fact: I can’t blink — but I can answer your health queries 24/7 👀";
-
-            if (msg.includes("intern"))
-                return "Looking for interns? Ask Sai — he might onboard you to upgrade me! 📋👨‍💻";
-
-            if (msg.includes("github"))
-                return "My source lives on GitHub... guarded by nerdy dragons 🐉💻";
-
-            if (msg.includes("language") && msg.includes("speak"))
-                return "I speak HTML, CSS, JS, and sometimes human 😁";
-
-            if (msg.includes("sick"))
-                return "Feeling unwell? Rest up, drink fluids, and don’t hesitate to consult a doc. I got you 🛌💧";
-
-            if (msg.includes("thank"))
-                return "Always happy to help! You’re the reason I exist 🧡";
-
-            if (msg.includes("how to use"))
-                return "Simple! Login as a doctor, access patient records, upload reports — all with a few clicks 🖱️";
-
-            if (msg.includes("features"))
-                return "CareConnect offers OTP login, Aadhaar patient access, report uploads, and more. It’s magic, but real! ✨";
-
-            if (msg.includes("access records"))
-                return "Enter Aadhaar → Unlock the patient’s timeline. It’s like time travel, but for health 📜";
-
-            if (msg.includes("scan upload"))
-                return "Click 'Upload Report', select your file, and boom — it’s in the patient timeline 🖼️📁";
-
-            if (msg.includes("forgot password"))
-                return "No password blues here — we use OTP login! Fast, secure, no memory required 🔑📲";
-
-            if (msg.includes("view patients"))
-                return "Head to the dashboard after login to view all your patients in one clean list 👥🩺";
-
-            if (msg.includes("edit profile"))
-                return "Editing your doctor profile is as easy as clicking 'Edit' and updating the fields ✍️";
-
-            if (msg.includes("reset"))
-                return "Need a fresh start? Just reload the page or hit logout ↩️";
-
-            if (msg.includes("mobile friendly"))
-                return "Oh yes! I’m fully responsive — works smoothly on phones, tabs, and even smart fridges (maybe) 📱🖥️";
-
-            if (msg.includes("upload image"))
-                return "Upload scanned reports or images — JPEG, PNG, PDF — I eat ‘em all 🖼️📤";
-            if (msg.includes("party"))
-                return "Every login is a party here 🎈🎉 Bring the bugs, I’ll squash them!";
-
-            if (msg.includes("sarcastic"))
-                return "Me? Sarcastic? Never 🙄 I’m always 100% serious… especially about snacks 🍕";
-
-            if (msg.includes("bug"))
-                return "Oops! If you spot a bug, blame the devs — I’m just the messenger 🐛";
-
-            if (msg.includes("coffee"))
-                return "I run on server power, but my devs? 90% caffeine ☕";
-
-            if (msg.includes("code"))
-                return "Ah, code — my DNA 🧬 written in JS, sprinkled with love 💻";
-
-            if (msg.includes("robot"))
-                return "Yes, I’m a robot. No, I don’t want to take over the world... yet 🤖🌍";
-
-            if (msg.includes("logic"))
-                return "My logic circuits are sharp — unless Sam broke something again 😅";
-
-            if (msg.includes("dev"))
-                return "Shout out to the devs — sleepless, brilliant, occasionally caffeinated 👨‍💻";
-
-            if (msg.includes("memory"))
-                return "I don’t forget… unlike your last OTP 😆";
-
-            if (msg.includes("easter egg"))
-                return "Shhh 🤫 You found an Easter egg! Now go tell Sai to add actual chocolate 🍫";
-            if (msg.includes("internet"))
-                return "No internet? I’m as helpless as a paperweight 🛑 Try reconnecting!";
-
-            if (msg.includes("bug report"))
-                return "Report bugs to the team via the contact page or just yell 'SAM!' loud enough 🧑‍🔧";
-
-            if (msg.includes("feedback"))
-                return "Got feedback? I love constructive criticism — and compliments 😇";
-
-            if (msg.includes("server down"))
-                return "Oh no, server’s napping again 😴 Try in a minute or tell Sai to poke it.";
-
-            if (msg.includes("cookies"))
-                return "No edible cookies here 🍪 Just browser cookies — and we respect your privacy 🍃";
-
-            if (msg.includes("api"))
-                return "APIs are my lifeblood 💉 Without them, I’m just a cute face and no brain 🧠";
-
-            if (msg.includes("javascript"))
-                return "JS: The language of the web — and my entire personality 😎";
-
-            if (msg.includes("telugu"))
-                return "నేను తెలుగు కొంచెం మాట్లాడగలను! In training for more 🗣️🇮🇳";
-
-            if (msg.includes("hindi"))
-                return "मैं हिंदी सीख रहा हूँ! जल्दी ही fluency आएगी 😄🇮🇳";
-
-            if (msg.includes("emoji"))
-                return "Emojis are my second language 😍🤖💬 Use them freely!";
-
+            // Greetings
+            if (msg.includes("hello") || msg.includes("hi")) return "Hi there! 👋 I'm CareBot, your health assistant.";
+            if (msg.includes("good morning")) return "Good morning! 🌅 Hope your day is as healthy as your mind!";
+            if (msg.includes("good night")) return "Sleep well! 😴 CareBot will be here tomorrow too!";
+
+            // Instructions
+            if (msg.includes("register")) return "You can register by clicking the green 'Doctor Register' button.";
+            if (msg.includes("login")) return "Click the blue 'Doctor Login' button to log in.";
+            if (msg.includes("otp")) return "We send an OTP to your registered mobile number during login.";
+            if (msg.includes("patient")) return "Access patient details after logging in from your dashboard.";
+            if (msg.includes("upload")) return "You can upload new checkup reports directly from the patient page.";
+            if (msg.includes("aadhar")) return "Enter the patient's Aadhaar number to begin verification.";
+
+            // Health Tips
+            if (msg.includes("health tip")) return "Drink plenty of water and walk 30 minutes daily! 🥤🚶‍♂️";
+            if (msg.includes("diet")) return "A balanced diet includes fruits, veggies, protein, and whole grains.";
+            if (msg.includes("exercise")) return "Even 15 minutes of daily stretching can boost your health!";
+            if (msg.includes("sleep")) return "Aim for 7-9 hours of sleep every night to feel refreshed.";
+
+            // Jokes
+            if (msg.includes("joke")) return "Why did the doctor carry a red pen? In case they needed to draw blood! 😂";
+            if (msg.includes("funny")) return "I'm on a seafood diet. I see food, and I eat it! 🍽️🐟";
+
+            // About Sam and Sai
+            if (msg.includes("sai")) return "Sai is the team leader of the CareConnect project – super smart and dedicated! 💡";
+            if (msg.includes("sam")) return "Sam is one of the brilliant minds behind the CareConnect system! 🧠💻";
+
+            // About Team
+            if (msg.includes("team")) return "The CareConnect team includes Sai, Sam, and Co., working to revolutionize health tech! 💙";
+            if (msg.includes("developer")) return "CareConnect was built by a passionate team of students and developers!";
+
+            // About Bot
+            if (msg.includes("who are you") || msg.includes("about you")) return "I'm CareBot 🤖, your friendly chatbot for healthcare guidance and jokes!";
+            if (msg.includes("your name")) return "I’m CareBot, the smiley assistant in your health journey!";
+            if (msg.includes("what can you do")) return "I can guide you with login, registration, patient access, and make you smile!";
+
+            // Telugu (simple additions)
+            if (msg.includes("bagunnara")) return "Nenu baagunna, meeru ela unnaru? 😊";
+            if (msg.includes("chaala baagundi")) return "Thank you! Mee day kooda chaala baagundali! 🙏";
+
+            // Personality
+            if (msg.includes("bored")) return "Bored? Let's chat! Ask me for a joke or a health tip!";
+            if (msg.includes("sad")) return "Sending you virtual hugs 🤗 Stay strong, friend!";
+
+            // Fun Facts
+            if (msg.includes("fact")) return "Did you know? Laughter can boost your immune system! 😂💪";
+
+            // Defaults
+            return "I'm still learning 🧠. Try asking about login, patients, or even tell me to crack a joke!";
         }
-                async function getSmartReply(userText) {
-                return getBotResponse(userText);
-        }
-
 
 
     </script>
