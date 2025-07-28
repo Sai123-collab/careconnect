@@ -13,29 +13,15 @@ load_dotenv()
 account_sid = os.getenv("TWILIO_ACCOUNT_SID")
 auth_token = os.getenv("TWILIO_AUTH_TOKEN")
 phone = os.getenv("TWILIO_PHONE_NUMBER")
-openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Initialize Twilio client
 client = Client(account_sid, auth_token)
 import os
 import os
-import openai
+
 from dotenv import load_dotenv
 
 load_dotenv()
-
-openai.api_key = os.getenv("OPENROUTER_API_KEY")
-openai.api_base = "https://openrouter.ai/api/v1"
-
-response = openai.ChatCompletion.create(
-    model="qwen/qwen3-235b-a22b-2507:free",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant for medical advice."},
-        {"role": "user", "content": "What are the symptoms of typhoid?"}
-    ]
-)
-
-print(response['choices'][0]['message']['content'])
 
 
 import sqlite3
