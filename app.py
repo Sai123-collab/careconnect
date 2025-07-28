@@ -5,6 +5,8 @@ import os
 import random
 from dotenv import load_dotenv
 from twilio.rest import Client
+from datetime import datetime
+
 
 # Load environment variables from .env
 load_dotenv()
@@ -109,10 +111,42 @@ def init_db():
         FOREIGN KEY (doctor_id) REFERENCES doctors(doctor_id)
     )
 ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS patient_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT,
+            aadhaar TEXT UNIQUE,
+            phone TEXT,
+            password TEXT
+        )
+    ''')
 
+    # Daily meal logging table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS daily_meals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            aadhaar TEXT,
+            date TEXT,
+            meal TEXT,
+            calories INTEGER
+        )
+    ''')
+
+    # BMI tracking table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS bmi_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            aadhaar TEXT,
+            date TEXT,
+            weight REAL,
+            height REAL,
+            bmi REAL
+        )
+    ''')
 
     conn.commit()
     conn.close()
+    print("✅ Patient tables created successfully.")
 
 # ---------- Routes ----------
 @app.route('/')
@@ -455,15 +489,6 @@ def upload_report():
             return redirect(url_for('patient_details'))
 
     return render_template('upload_report.html')
-
-
-@app.route('/logout')
-def logout():
-    session.clear()
-    flash("Logged out successfully", "success")
-    return redirect(url_for('index'))
-
-# ---------- Run ----------
 @app.route('/delete_report/<filename>', methods=['POST'])
 def delete_report(filename):
     if 'doctor_id' not in session:
@@ -485,6 +510,266 @@ def delete_report(filename):
 
     flash('Report removed successfully.', 'success')
     return redirect(url_for('patient_details'))
+# -------------------- PATIENT LOGIN SYSTEM --------------------
+
+@app.route('/patient_register', methods=['GET', 'POST'])
+def patient_register():
+    if request.method == 'POST':
+        name = request.form['name']
+        aadhaar = request.form['aadhaar']
+        phone = request.form['phone']
+        password = request.form['password']
+
+        conn = sqlite3.connect('careconnect.db')
+        cursor = conn.cursor()
+
+        try:
+            cursor.execute("INSERT INTO patient_users (name, aadhaar, phone, password) VALUES (?, ?, ?, ?)",
+                           (name, aadhaar, phone, password))
+            conn.commit()
+            flash("Registration successful! Please login.", "success")
+            return redirect(url_for('patient_login'))
+        except sqlite3.IntegrityError:
+            flash("Aadhaar already registered.", "danger")
+        finally:
+            conn.close()
+
+    return render_template('patient_register.html')
+
+
+@app.route('/patient_login', methods=['GET', 'POST'])
+def patient_login():
+    if request.method == 'POST':
+        aadhaar = request.form['aadhaar']
+        password = request.form['password']
+
+        conn = sqlite3.connect('careconnect.db')
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM patient_users WHERE aadhaar = ? AND password = ?", (aadhaar, password))
+        patient = cursor.fetchone()
+        conn.close()
+
+        if patient:
+            session['patient_aadhaar'] = aadhaar
+            return redirect(url_for('patient_dashboard'))
+        else:
+            flash("Invalid Aadhaar or Password", "danger")
+
+    return render_template('patient_login.html')
+
+
+from flask import Flask, render_template, request, redirect, session, send_file
+import sqlite3
+import pandas as pd
+from fpdf import FPDF
+import os
+
+
+
+@app.route('/patientsdashboard', methods=['GET', 'POST'])
+def patient_dashboard():
+    if "patient_aadhaar" not in session:
+        return redirect("/patient_login")
+
+    aadhaar = session["patient_aadhaar"]
+    conn = sqlite3.connect("careconnect.db")
+    cursor = conn.cursor()
+
+    # Fetch BMI records
+    cursor.execute("SELECT date, bmi FROM bmi_records WHERE aadhaar = ? ORDER BY date", (aadhaar,))
+    records = cursor.fetchall()
+    dates = [r[0] for r in records]
+    bmis = [float(round(r[1], 2)) for r in records]
+
+    # Fetch recent meals with ID
+    cursor.execute("""
+        SELECT date, meal, calories, id
+        FROM daily_meals
+        WHERE aadhaar = ?
+        ORDER BY date DESC, id DESC
+        LIMIT 10
+    """, (aadhaar,))
+    meals = cursor.fetchall()
+
+    # Average BMI and Calories
+    avg_bmi = round(sum(bmis) / len(bmis), 2) if bmis else 0
+    latest_bmi = float(bmis[-1]) if bmis else 0
+
+    cursor.execute("SELECT date, SUM(calories) FROM daily_meals WHERE aadhaar = ? GROUP BY date", (aadhaar,))
+    daily_cals = cursor.fetchall()
+    cal_vals = [r[1] for r in daily_cals]
+    avg_calories = round(sum(cal_vals) / len(cal_vals), 2) if cal_vals else 0
+    calorie_dates = [r[0] for r in daily_cals]
+    calorie_values = [r[1] for r in daily_cals]
+
+
+    # Patient name
+    cursor.execute("SELECT name FROM patient_users WHERE aadhaar = ?", (aadhaar,))
+    name = cursor.fetchone()[0]
+        # Doctor Alert based on BMI
+    if latest_bmi < 18.5:
+        doctor_alert = "⚠️ Underweight - Consider a high-nutrient diet."
+    elif 18.5 <= latest_bmi <= 24.9:
+        doctor_alert = "✅ Normal weight - Keep up the good work!"
+    elif 25 <= latest_bmi <= 29.9:
+        doctor_alert = "⚠️ Overweight - Exercise regularly & eat balanced meals."
+    else:
+        doctor_alert = "❗ Obese - Consult your doctor for a weight management plan."
+
+    conn.close()
+
+    return render_template("patient_dashboard.html",
+                       name=name,
+                       dates=dates,
+                       bmis=bmis,
+                       meals=meals,
+                       avg_bmi=avg_bmi,
+                       avg_calories=avg_calories,
+                       latest_bmi=latest_bmi,
+                       calorie_dates=calorie_dates,
+                       calorie_values=calorie_values,
+                       doctor_alert=doctor_alert)
+
+
+
+
+@app.route("/download_bmi_csv")
+def download_bmi_csv():
+    if "patient_aadhaar" not in session:
+        return redirect("/patient_login")
+
+    aadhaar = session["patient_aadhaar"]
+    conn = sqlite3.connect("careconnect.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT date, weight, height, bmi FROM bmi_records WHERE aadhaar = ? ORDER BY date", (aadhaar,))
+    data = cursor.fetchall()
+    df = pd.DataFrame(data, columns=["Date", "Weight (kg)", "Height (cm)", "BMI"])
+    csv_path = "bmi_history.csv"
+    df.to_csv(csv_path, index=False)
+    conn.close()
+    return send_file(csv_path, as_attachment=True)
+
+@app.route("/download_bmi_pdf")
+def download_bmi_pdf():
+    if "patient_aadhaar" not in session:
+        return redirect("/patient_login")
+
+    aadhaar = session["patient_aadhaar"]
+    conn = sqlite3.connect("careconnect.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT date, weight, height, bmi FROM bmi_records WHERE aadhaar = ? ORDER BY date", (aadhaar,))
+    data = cursor.fetchall()
+    conn.close()
+
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt="BMI History Report", ln=True, align='C')
+
+    pdf.set_font("Arial", size=10)
+    pdf.ln(10)
+    pdf.cell(40, 10, "Date", 1)
+    pdf.cell(40, 10, "Weight (kg)", 1)
+    pdf.cell(40, 10, "Height (cm)", 1)
+    pdf.cell(40, 10, "BMI", 1)
+    pdf.ln()
+
+    for row in data:
+        pdf.cell(40, 10, row[0], 1)
+        pdf.cell(40, 10, str(row[1]), 1)
+        pdf.cell(40, 10, str(row[2]), 1)
+        pdf.cell(40, 10, str(round(row[3], 2)), 1)
+        pdf.ln()
+
+    filename = f"bmi_report_{aadhaar}.pdf"
+    pdf.output(filename)
+    return send_file(filename, as_attachment=True)
+@app.route('/delete/<int:meal_id>', methods=['POST'])
+def delete_meal(meal_id):
+    if 'patient_aadhaar' not in session:
+        return redirect(url_for('patient_login'))
+
+    meal_id = request.form.get('meal_id')
+
+    if meal_id:
+        conn = sqlite3.connect('careconnect.db')
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM daily_meals WHERE id = ?", (meal_id,))
+        conn.commit()
+        conn.close()
+        flash("Meal deleted successfully.", "success")
+    else:
+        flash("Meal ID missing.", "danger")
+
+    return redirect(url_for('patient_dashboard'))
+
+
+
+
+
+
+
+@app.route('/log_health', methods=['GET', 'POST'])
+def log_health():
+    if 'patient_aadhaar' not in session:
+        return redirect(url_for('patient_login'))
+
+    if request.method == 'POST':
+        date = request.form['date']
+        weight = float(request.form['weight'])
+        height = float(request.form['height']) / 100  # cm to meters
+        bmi = round(weight / (height ** 2), 2)
+
+        meals = request.form.getlist('meal')
+        calories = request.form.getlist('calories')
+
+        print("DEBUG Meals:", meals)
+        print("DEBUG Calories:", calories)
+        print("DEBUG Date:", date)
+
+        aadhaar = session['patient_aadhaar']
+
+        if not meals or not calories or len(meals) != len(calories):
+            flash("No meals or calories data submitted.", "danger")
+            return redirect(url_for('log_health'))
+
+        conn = sqlite3.connect('careconnect.db')
+        cursor = conn.cursor()
+
+        # ✅ Insert BMI after meal check
+        cursor.execute("INSERT INTO bmi_records (aadhaar, date, weight, height, bmi) VALUES (?, ?, ?, ?, ?)",
+                       (aadhaar, date, weight, height * 100, bmi))
+
+        # Insert Meals
+        # Insert Meals with validation
+        for m, c in zip(meals, calories):
+            if not c.strip().isdigit():
+                flash(f"Invalid calorie value '{c}' for meal '{m}'. Please enter a valid number.", "danger")
+                return redirect(url_for('log_health'))
+
+            cursor.execute("INSERT INTO daily_meals (aadhaar, date, meal, calories) VALUES (?, ?, ?, ?)",
+                        (aadhaar, date, m, int(c)))
+
+
+        conn.commit()
+        conn.close()
+
+        flash("Health data logged!", "success")
+        print("DEBUG BMI:", bmi)
+
+        return redirect(url_for('patient_dashboard'))
+
+    return render_template('log_health.html')
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("Logged out successfully", "success")
+    return redirect(url_for('index'))
+
+# ---------- Run ----------
+
 
 
 if __name__ == '__main__':
