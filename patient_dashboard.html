@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Patient Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link 
+        rel="stylesheet" 
+        href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    >
+    <style>
+        body {
+            background: linear-gradient(to right, #e3f2fd, #ffffff);
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .dashboard-container {
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h2, h4 {
+            color: #1565c0;
+            text-align: center;
+        }
+        .list-group-item {
+            border: none;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .delete-btn {
+            margin-left: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <div class="dashboard-container">
+        <h2>Welcome, {{ name }}</h2>
+        <div class="d-flex justify-content-end">
+            <a href="/" class="btn btn-outline-danger btn-sm mb-3">Logout</a>
+        </div>
+
+        <div class="text-center">
+            <a class="btn btn-primary mb-4" href="/log_health">Log Today’s Health</a>
+        </div>
+
+        <h4>BMI Progress Chart</h4>
+        <div class="mb-5">
+            <canvas id="bmiChart" height="100"></canvas>
+            <h4 class="text-center mt-4">
+                🥗 Average Daily Calorie Intake: <span class="text-success">{{ avg_calories }} cal</span>
+            </h4>
+            <h5 class="text-center mt-2">
+                💪 Latest BMI: <span class="text-primary">{{ latest_bmi }}</span>
+            </h5>
+            <h5 class="text-center mt-3">
+                👨‍⚕️ <strong>Doctor Alert:</strong> 
+                <span class="text-danger">{{ doctor_alert }}</span>
+            </h5>
+
+
+
+        </div>
+                    <h4 class="mt-5">Daily Calorie Intake</h4>
+            <canvas id="calorieChart" height="100"></canvas>
+
+            <script>
+                const calCtx = document.getElementById('calorieChart').getContext('2d');
+                const avgCalories = {{ avg_calories }};
+                const calorieChart = new Chart(calCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: {{ calorie_dates|tojson }},
+                        datasets: [{
+                            label: 'Calories',
+                            data: {{ calorie_values|tojson }},
+                            backgroundColor: {{ calorie_values|map('float')|map('round', 2)|list|tojson }}.map(c => c > avgCalories ? 'rgba(255, 99, 132, 0.7)' : 'rgba(75, 192, 192, 0.7)')
+                        }]
+                    },
+                    options: {
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Calories'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Date'
+                                }
+                            }
+                        }
+                    }
+                });
+            </script>
+
+
+        <script>
+            const ctx = document.getElementById('bmiChart').getContext('2d');
+            const bmiChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: {{ dates|tojson }},
+                    datasets: [{
+                        label: 'BMI',
+                        data: {{ bmis|tojson }},
+                        borderColor: 'blue',
+                        fill: false,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: 'BMI Value'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    }
+                }
+            });
+        </script>
+        <h4 class="mt-5">Recent Meals</h4>
+            <div class="table-responsive">
+           <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Food</th>
+                        <th>Calories</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in meals %}
+                    <tr>
+                        <td>{{ m[0] }}</td>
+                        <td>{{ m[1] }}</td>
+                        <td>{{ m[2] }}</td>
+                        <td>
+                            <form method="POST" action="/delete/{{ m[3] }}" class="d-inline">
+                                <input type="hidden" name="meal_id" value="{{ m[3] }}">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            </div>
+        </ul>
+    </div>
+</div>
+</body>
+</html> 
