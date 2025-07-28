@@ -13,9 +13,31 @@ load_dotenv()
 account_sid = os.getenv("TWILIO_ACCOUNT_SID")
 auth_token = os.getenv("TWILIO_AUTH_TOKEN")
 phone = os.getenv("TWILIO_PHONE_NUMBER")
+openai_api_key = os.getenv("OPENAI_API_KEY")
 
 # Initialize Twilio client
 client = Client(account_sid, auth_token)
+import os
+import os
+import openai
+from dotenv import load_dotenv
+
+load_dotenv()
+
+openai.api_key = os.getenv("OPENROUTER_API_KEY")
+openai.api_base = "https://openrouter.ai/api/v1"
+
+response = openai.ChatCompletion.create(
+    model="qwen/qwen3-235b-a22b-2507:free",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant for medical advice."},
+        {"role": "user", "content": "What are the symptoms of typhoid?"}
+    ]
+)
+
+print(response['choices'][0]['message']['content'])
+
+
 import sqlite3
 
 def get_db_connection():
@@ -236,37 +258,59 @@ def register_patient():
 
 @app.route('/verify_otp', methods=['GET', 'POST'])
 def verify_otp():
-    if 'otp' not in session:
-        return redirect(url_for('dashboard'))
+    # Generate backup code if not already created
+    if "backup_code" not in session:
+        session["backup_code"] = str(random.randint(100000, 999999))
 
     if request.method == 'POST':
         entered_otp = request.form['otp']
-        if entered_otp == session.get('otp'):
+        correct_otp = session.get('otp')
+        backup_code = session.get('backup_code')
+
+        if entered_otp == correct_otp or entered_otp == backup_code:
             flash("✅ OTP verified successfully!", "success")
             return redirect(url_for('patient_details'))
         else:
-            flash("❌ Incorrect OTP. Try again.", "danger")
+            flash("❌ Invalid OTP or Backup Code. Please try again.", "danger")
 
-    return render_template('verify_otp.html', backup_code=session.get('otp'))  # or backup_code=session["backup_code"]
+    return render_template('verify_otp.html', backup_code=session["backup_code"])
+  # or backup_code=session["backup_code"]
 
 
 @app.route('/resend_otp')
 def resend_otp():
-    if 'doctor_phone' in session:
-        phone = session['doctor_phone']
-        otp = str(random.randint(1000, 9999))
-        session['otp'] = otp
+    if 'aadhaar' not in session:
+        return "Session expired", 403
+
+    otp = str(random.randint(1000, 9999))
+    session['otp'] = otp
+    session['backup_code'] = str(random.randint(100000, 999999))  # regenerate backup code
+
+    # Get phone number from DB again
+    conn = sqlite3.connect('careconnect.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT phone FROM patients WHERE aadhaar = ?", (session['aadhaar'],))
+    patient_phone = cursor.fetchone()
+    conn.close()
+
+    if patient_phone and patient_phone[0]:
         try:
-            message = client.messages.create(
-                body=f"Your OTP for Care Connect is {otp}",
-                from_=twilio_number,
-                to=phone
+            to_number = patient_phone[0]
+            if not to_number.startswith('+'):
+                to_number = '+91' + to_number
+
+            client.messages.create(
+                body=f"Your new OTP for CareConnect is: {otp}",
+                from_=phone,
+                to=to_number
             )
-            return '', 200
+            return "OK", 200
         except Exception as e:
-            print("Failed to resend OTP:", e)
-            return '', 500
-    return '', 401
+            print(f"Error resending OTP: {e}")
+            return "Twilio error", 500
+    else:
+        return "Phone number not found", 404
+
 
 
 
@@ -361,7 +405,8 @@ def add_checkup():
         cursor = conn.cursor()
 
         # Insert patient info if not already present
-        cursor.execute("INSERT OR IGNORE INTO patients VALUES (?, ?, ?, ?)", (aadhaar, name, age, gender))
+        cursor.execute("INSERT OR IGNORE INTO patients VALUES (?, ?, ?, ?, ?)", (aadhaar, name, age, gender, phone))
+
 
         # Insert new checkup linked to this Aadhaar
         cursor.execute(
