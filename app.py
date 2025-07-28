@@ -540,8 +540,10 @@ def patient_register():
 @app.route('/patient_login', methods=['GET', 'POST'])
 def patient_login():
     if request.method == 'POST':
-        aadhaar = request.form['aadhaar']
-        password = request.form['password']
+        aadhaar = request.form.get('aadhaar')
+        password = request.form.get('password')
+
+        print(f"Login attempt with Aadhaar: {aadhaar}")  # Debug print
 
         conn = sqlite3.connect('careconnect.db')
         cursor = conn.cursor()
@@ -551,8 +553,10 @@ def patient_login():
 
         if patient:
             session['patient_aadhaar'] = aadhaar
+            print("Login successful. Redirecting to dashboard.")
             return redirect(url_for('patient_dashboard'))
         else:
+            print("Login failed. Showing error.")
             flash("Invalid Aadhaar or Password", "danger")
 
     return render_template('patient_login.html')
