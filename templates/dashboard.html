@@ -88,9 +88,14 @@
         <div class="mb-3">
             <label for="aadhaar" class="form-label">Enter Patient Aadhaar Number</label>
             <input type="text" class="form-control" name="aadhaar" required pattern="\d{12}" title="12-digit Aadhaar number">
+
         </div>
         <button type="submit" class="btn btn-primary">Send OTP</button>
     </form>
+    <a href="{{ url_for('register_patient') }}" class="btn btn-primary mb-3">
+    ➕ Register New Patient
+</a>
+
 
     <a href="/logout" class="btn btn-secondary">Logout</a>
 </div>
