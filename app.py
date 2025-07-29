@@ -155,18 +155,15 @@ def index():
 @app.route("/admin", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
-        adharno = request.form["adharno"].strip()
-        password = request.form["password"].strip()
-
-        env_adhar = os.getenv("ADMIN_ADHAAR")
-        env_pass = os.getenv("ADMIN_PASSWORD")
-
-        if adharno == env_adhar and password == env_pass:
+        adharno = request.form["adharno"] .strip()
+        password = request.form["password"] .strip()
+        if adharno == "270439758659" and password == "Sai@2005":
             session["admin"] = True
             return redirect(url_for("admin_dashboard"))
         else:
             flash("Invalid admin credentials", "danger")
     return render_template("admin_login.html")
+@app.route("/admin/dashboard") 
 
 @app.route("/admin/dashboard")
 def admin_dashboard():
