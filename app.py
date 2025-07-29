@@ -152,6 +152,64 @@ def init_db():
 @app.route('/')
 def index():
     return render_template('index.html')
+@app.route("/admin", methods=["GET", "POST"])
+def admin_login():
+    if request.method == "POST":
+        adharno = request.form["adharno"].strip()
+        password = request.form["password"].strip()
+
+        env_adhar = os.getenv("ADMIN_ADHAAR")
+        env_pass = os.getenv("ADMIN_PASSWORD")
+
+        if adharno == env_adhar and password == env_pass:
+            session["admin"] = True
+            return redirect(url_for("admin_dashboard"))
+        else:
+            flash("Invalid admin credentials", "danger")
+    return render_template("admin_login.html")
+
+@app.route("/admin/dashboard")
+def admin_dashboard():
+    if not session.get("admin"):
+        return redirect(url_for("admin_login"))
+
+    conn = sqlite3.connect("careconnect.db")
+    c = conn.cursor()
+    c.execute("SELECT * FROM doctors")
+    doctors = c.fetchall()
+    c.execute("SELECT * FROM patients")
+    patients = c.fetchall()
+    conn.close()
+
+    return render_template("admin_dashboard.html", doctors=doctors, patients=patients)
+@app.route("/delete_doctor/<doctor_id>", methods=["POST"])
+def delete_doctor(doctor_id):
+    conn = sqlite3.connect("careconnect.db")
+    c = conn.cursor()
+    c.execute("DELETE FROM doctors WHERE doctor_id = ?", (doctor_id,))
+    conn.commit()
+    conn.close()
+    flash("Doctor deleted successfully.")
+    return redirect(url_for("admin_dashboard"))  # or wherever your doctor list is shown
+
+
+@app.route('/delete_patient/<int:patient_id>', methods=['POST'])
+def delete_patient(patient_id):
+    conn = sqlite3.connect('careconnect.db')
+    c = conn.cursor()
+    c.execute("DELETE FROM patients WHERE aadhaar = ?", (patient_id,))
+
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin_dashboard'))
+
+@app.route("/admin/logout")
+def logout_admin():
+    session.pop("admin", None)
+    flash("Logged out successfully", "success")
+    return redirect(url_for("index"))
+
+
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -189,6 +247,8 @@ def login():
 
         if doctor:
             session['doctor_id'] = doctor_id
+            session['doctor_name'] = doctor[1]  # assuming doctor[1] is the name column
+
             return redirect(url_for('dashboard'))
         else:
             flash("Invalid login credentials", "danger")
@@ -278,7 +338,6 @@ def register_patient():
 
 @app.route('/verify_otp', methods=['GET', 'POST'])
 def verify_otp():
-    # Generate backup code if not already created
     if "backup_code" not in session:
         session["backup_code"] = str(random.randint(100000, 999999))
 
@@ -289,12 +348,31 @@ def verify_otp():
 
         if entered_otp == correct_otp or entered_otp == backup_code:
             flash("✅ OTP verified successfully!", "success")
+            session["doctor_name_for_patient"] = session.get("doctor_name", "Unknown Doctor")
+
+            # Save doctor access info
+            conn = sqlite3.connect('careconnect.db')
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS patient_doctor_access (
+                    aadhaar TEXT PRIMARY KEY,
+                    doctor_name TEXT,
+                    doctor_id TEXT,
+                    last_access TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            cursor.execute('''
+                INSERT OR REPLACE INTO patient_doctor_access (aadhaar, doctor_name, doctor_id)
+                VALUES (?, ?, ?)
+            ''', (session.get('aadhaar'), session.get('doctor_name'), session.get('doctor_id')))
+            conn.commit()
+            conn.close()
+
             return redirect(url_for('patient_details'))
         else:
             flash("❌ Invalid OTP or Backup Code. Please try again.", "danger")
 
     return render_template('verify_otp.html', backup_code=session["backup_code"])
-  # or backup_code=session["backup_code"]
 
 
 @app.route('/resend_otp')
@@ -619,6 +697,7 @@ def patient_dashboard():
         doctor_alert = "⚠️ Overweight - Exercise regularly & eat balanced meals."
     else:
         doctor_alert = "❗ Obese - Consult your doctor for a weight management plan."
+    doctor_name = session.get('doctor_name_for_patient', None)
 
     conn.close()
 
@@ -632,7 +711,8 @@ def patient_dashboard():
                        latest_bmi=latest_bmi,
                        calorie_dates=calorie_dates,
                        calorie_values=calorie_values,
-                       doctor_alert=doctor_alert)
+                       doctor_alert=doctor_alert,
+                       doctor_name=doctor_name)
 
 
 
